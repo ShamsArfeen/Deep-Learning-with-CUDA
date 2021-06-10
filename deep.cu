@@ -154,10 +154,10 @@ int main() {
 
     for ( count = 0; count < 1000; count++) {
 
-        predict<<<1,100>>>(N, W, pY);
+        predict<<<1,20>>>(N, W, pY);
         CUDA_CALL(cudaDeviceSynchronize());
 
-        train<<<1,100>>>(N, W, Y, pY, U, V);
+        train<<<1,20>>>(N, W, Y, pY, U, V);
         CUDA_CALL(cudaDeviceSynchronize());
 
         if (count % 100 == 0) {
