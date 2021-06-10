@@ -11,7 +11,7 @@
 #define df(y) (1 - (y) * (y)) // derivative of activation function in y terms
 
 double W[DEPTH-1][BREADTH][BREADTH]; // W_kij : weight of edge b/w jth and ith node from kth layer and k+1th layer resp. 
-double N[DEPTH][BREADTH]; // N_ki : jth node in kth layer
+double N[DEPTH][BREADTH]; // N_ki : ith node in kth layer
 double Y[BREADTH]; // expected output vector
 
 int count = 0;
