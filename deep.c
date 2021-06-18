@@ -3,16 +3,20 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define DEPTH 3 // no of layers
-#define BREADTH 20 // nodes per layer
-#define RATE 0.01 // learning rate
+#define DEPTH 5 // no of layers
+#define BREADTH 1000 // nodes per layer
+#define RATE 0.0001 // learning rate
 
 #define f(x) (tanh(x)) // activation function
 #define df(y) (1 - (y) * (y)) // derivative of activation function in y terms
 
-double W[DEPTH-1][BREADTH][BREADTH]; // W_kij : weight of edge b/w jth and ith node from kth layer and k+1th layer resp. 
-double N[DEPTH][BREADTH]; // N_ki : ith node in kth layer
-double Y[BREADTH]; // expected output vector
+#define NDIM(a,b) ((a)*BREADTH+(b)) 
+#define WDIM(a,b,c) ((a)*BREADTH*BREADTH+(b)*BREADTH+(c))
+
+double *W; //[DEPTH-1][BREADTH][BREADTH]; // W_kij : weight of edge b/w jth and ith node from kth layer and k+1th layer resp. 
+double *N; //[DEPTH][BREADTH]; // N_ki : jth node in kth layer
+double *Y; //[BREADTH]; // expected output vector
+double *V, *U;
 
 int count = 0;
 
@@ -23,24 +27,27 @@ int predict() {
      // erase all nodes except first layer
     for ( k = 1; k < DEPTH ; k++ ) {
         for ( i = 0 ; i < BREADTH ; i++ ) {
-            N[k][i] = 0;
+            N[NDIM(k,i)] = 0; //(i == 0); // one node hardcoded to 1 produces bias term for the next layer
         }
     }
+    
     for ( k = 1; k < DEPTH ; k++ ) {
+        
         // matrix-vector multiplication W*N b/w k-1th and kth layer
         for ( i = 0 ; i < BREADTH ; i++ ) {
             for ( j = 0; j < BREADTH; j++ ) {
-                N[k][i] += W[k-1][i][j] * N[k-1][j];
+                N[NDIM(k,i)] += W[WDIM(k-1,i,j)] * N[NDIM(k-1,j)];
             }
         }
+
         // activation function on kth layer
         for ( i = 0 ; i < BREADTH ; i++ )
-            N[k][i] = f( N[k][i] );
+            N[NDIM(k,i)] = f( N[NDIM(k,i)] );
     }
     return 0;
 }
 
-int calculateError() { 
+void calculateError() { 
     // prints the value of error function
 
     double err = 0, dY;
@@ -49,27 +56,24 @@ int calculateError() {
     // dY : difference b/w expected and predicted output, and
     // error : sum of squares of dY
     for ( i = 0 ; i < BREADTH ; i++ ) {
-        dY = (N[k][i] - Y[i]);
+        dY = (N[NDIM(k,i)] - Y[i]);
         err += dY * dY;
     }
-    printf("Iteration Count : %d  Loss Function : %f\n", count, err);
+    printf("ITERATION : %d\tLOSS : %f\t", count, err);
 }
 
 int train() {
-    double V[BREADTH], U[BREADTH];
     int q = DEPTH - 2;
-
-    predict();
 
     // caching chain-rule calculation in vector to aid in backpropagation
     for ( int i = 0 ; i < BREADTH ; i++ ) {
-        V[i] = (N[q+1][i] - Y[i]) * df( N[q+1][i]);
+        V[i] = (N[NDIM(q+1,i)] - Y[i]) * df( N[NDIM(q+1,i)]);
     }
 
     // update weights of outer layer
     for ( int i = 0 ; i < BREADTH ; i++ ) {
         for ( int j = 0 ; j < BREADTH ; j++ ) {
-            W[q][i][j] -= RATE * V[i] * N[q][j];
+            W[WDIM(q,i,j)] -= RATE * V[i] * N[NDIM(q,j)];
         }
     }
     double *A = &V[0], *B = &U[0];
@@ -82,7 +86,7 @@ int train() {
         // derivative of activation function on the same layer's nodes
         for ( int i = 0; i < BREADTH; i++ ) {
             for ( int j = 0; j < BREADTH; j++ ) {
-                B[j] += A[i] * W[k+1][i][j] * df( N[k+1][j]);
+                B[j] += A[i] * W[WDIM(k+1,i,j)] * df( N[NDIM(k+1,j)]);
             }
         }   
         temp = B;        B = A;        A = temp;
@@ -90,41 +94,66 @@ int train() {
         // adjust weights by gradient descent
         for ( int i = 0; i < BREADTH; i++ ) {
             for ( int j = 0; j < BREADTH; j++ ) {
-                W[k][i][j] -= RATE * A[i] * N[k][j];
+                W[WDIM(k,i,j)] -= RATE * A[i] * N[NDIM(k,j)];
             }
         }
     }
     return 0;
 }
 
-int initialize() {
+void initialize() {
+
+    int w = (DEPTH-1) * BREADTH * BREADTH;
+    W = (double*) malloc(w * sizeof(double));
+    N = (double*) malloc(BREADTH * DEPTH * sizeof(double));
+    Y = (double*) malloc(BREADTH * sizeof(double));
+    U = (double*) malloc(BREADTH * sizeof(double));
+    V = (double*) malloc(BREADTH * sizeof(double));
+
     int i, j, k;
-    srand(time(0));
+    srand(3);
 
      // randomly assigning weights
 	for ( i = 0; i < DEPTH-1; i++ )
 	for ( j = 0; j < BREADTH; j++ )
 	for ( k = 0; k < BREADTH; k++ )
-		W[i][j][k] = (rand() % 100) / (double)1000;
+		W[WDIM(i,j,k)] = 1 / (double)BREADTH;
 
      // random input and output vectors
 	for ( i = 0; i < BREADTH; i++ ) {
-        N[0][i] = (rand() % 100) / (double)100;
-        Y[i] = (rand() % 100) / (double)100;
+        N[NDIM(0,i)] = i / (double)BREADTH; //(rand() % 100) / (double)100;
+        Y[i] = i / (double)BREADTH; //(rand() % 100) / (double)100;
     }
+}
 
-    return 0;
+void freeResources() {
+    free(N);
+    free(W);
+    free(Y);
+    free(U);
+    free(V);
 }
 
 int main() {
 
     initialize();
 
-    for ( count = 0; count < 1000; count++) {
-        train();
+    for ( count = 0; count < 4; count++) {
+
+        clock_t begin, end;
+        begin = clock();
         
-        if (count % 100 == 0) calculateError();
+        predict();
+        train();
+
+        end = clock();
+        double CpuTime = (double)(end - begin) / CLOCKS_PER_SEC;
+
+        calculateError();
+        printf("TIME: %f\n", CpuTime);
     }
+
+    freeResources();
 
     return 0;
 }
