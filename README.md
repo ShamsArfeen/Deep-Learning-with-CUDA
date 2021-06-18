@@ -9,6 +9,10 @@ For CUDA code:
 For C code:
 `gcc -lm deep.c -o deepc`
 
-## Example Execution
-1000 Neurons & 5 Layers
+## Example Execution for Performance
+1000 neurons, 5 layers and learning rate of 0.0001
 ![](http://github.com/ShamsArfeen/Deep-Learning-with-CUDA/blob/main/deeplearning.JPG?raw=true)
+
+## Example Execution for Correctness
+With a constant random seed, 30 neurons per layer, 3 layers and learning rate of 0.1
+![](http://github.com/ShamsArfeen/Deep-Learning-with-CUDA/blob/main/deeplearning2.JPG?raw=true)
